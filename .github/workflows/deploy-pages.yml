@@ -34,22 +34,36 @@ jobs:
       - name: Build
         run: npm run build -- --base=/portfolio/
 
-      - name: Prepare Pages artifact
+      - name: Generate static Pages HTML
         run: |
-          if [ -f dist/index.html ]; then
-            pages_dir=dist
-          elif [ -f dist/client/index.html ]; then
-            rm -rf dist-pages
-            cp -R dist/client dist-pages
-            pages_dir=dist-pages
-          else
-            echo "Build output not found."
-            find dist -maxdepth 3 -type f | sort || true
-            exit 1
-          fi
+          node --input-type=module <<'EOF'
+          import { mkdir, writeFile } from 'node:fs/promises';
 
-          cp "$pages_dir/index.html" "$pages_dir/404.html"
-          echo "PAGES_DIR=$pages_dir" >> "$GITHUB_ENV"
+          const handlerModule = await import('./dist/server/server.js');
+          const handler = handlerModule.default ?? handlerModule;
+
+          if (!handler || typeof handler.fetch !== 'function') {
+            throw new Error('Server bundle does not export a fetch handler.');
+          }
+
+          const response = await handler.fetch(
+            new Request('https://vikalpshakya.github.io/portfolio/'),
+            {},
+            {},
+          );
+
+          if (!response.ok) {
+            throw new Error(`Server render failed with status ${response.status}`);
+          }
+
+          const html = await response.text();
+
+          await mkdir('dist/client', { recursive: true });
+          await writeFile('dist/client/index.html', html);
+          await writeFile('dist/client/404.html', html);
+          EOF
+
+          echo "PAGES_DIR=dist/client" >> "$GITHUB_ENV"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
