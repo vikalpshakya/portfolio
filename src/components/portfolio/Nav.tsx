@@ -21,13 +21,6 @@ export function Nav() {
             </a>
           ))}
         </nav>
-        <a
-          href="mailto:vikalp.shakya29@gmail.com"
-          target="_top"
-          className="font-mono text-xs px-3 py-1.5 rounded-md border border-border hover:border-accent hover:text-accent transition-colors"
-        >
-          say hi →
-        </a>
       </div>
     </header>
   );
